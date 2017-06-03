@@ -18,6 +18,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.RatingBar;
 import android.widget.Spinner;
@@ -27,6 +28,7 @@ import android.widget.Toast;
 import java.io.IOException;
 import java.io.InputStream;
 import java.sql.SQLException;
+import java.util.List;
 
 import rs.aleph.android.example25.R;
 import rs.aleph.android.example25.activities.MainActivity;
@@ -94,9 +96,6 @@ public class DetailFragment extends Fragment implements AdapterView.OnItemSelect
         TextView description = (TextView) view.findViewById(R.id.description);
         description.setText(product.getDescription());
 
-        TextView category = (TextView) view.findViewById(R.id.category);
-        category.setText(product.getCategory().getName());
-
         RatingBar ratingBar = (RatingBar) view.findViewById(R.id.rating);
         ratingBar.setRating(product.getRating());
 
@@ -110,23 +109,28 @@ public class DetailFragment extends Fragment implements AdapterView.OnItemSelect
             e.printStackTrace();
         }
 
-        FloatingActionButton button = (FloatingActionButton) view.findViewById(R.id.buy);
-        button.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                // Creates notification with the notification builder
-                NotificationCompat.Builder builder = new NotificationCompat.Builder(getActivity());
-                Bitmap bitmap = BitmapFactory.decodeResource(getActivity().getResources(), R.drawable.ic_stat_buy);
-                builder.setSmallIcon(R.drawable.ic_stat_buy);
-                builder.setContentTitle(getActivity().getString(R.string.notification_title));
-                builder.setContentText(getActivity().getString(R.string.notification_text));
-                builder.setLargeIcon(bitmap);
+        Spinner spinner = (Spinner) view.findViewById(R.id.category);
 
-                // Shows notification with the notification manager (notification ID is used to update the notification later on)
-                NotificationManager manager = (NotificationManager)getActivity().getSystemService(Context.NOTIFICATION_SERVICE);
-                manager.notify(NOTIFICATION_ID, builder.build());
+
+        try {
+            List<rs.aleph.android.example25.db.model.Category> list = ((MainActivity) getActivity()).getDatabaseHelper().getCategoryDao().queryForAll();
+            ArrayAdapter<rs.aleph.android.example25.db.model.Category> dataAdapter = new ArrayAdapter<>(
+                    getActivity(),
+                    android.R.layout.simple_spinner_item,
+                    list);
+            spinner.setAdapter(dataAdapter);
+
+
+            for (int i=0;i<list.size();i++){
+                if (list.get(i).getId() == product.getCategory().getId()){
+                    spinner.setSelection(i);
+                    break;
+                }
             }
-        });
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
 
         return view;
     }
@@ -135,28 +139,6 @@ public class DetailFragment extends Fragment implements AdapterView.OnItemSelect
         this.product = product;
     }
 
-    public void updateProduct(Product product) {
-        this.product = product;
-
-        TextView name = (TextView) getActivity().findViewById(R.id.name);
-        name.setText(product.getmName());
-
-        TextView description = (TextView) getActivity().findViewById(R.id.description);
-        description.setText(product.getDescription());
-
-        RatingBar ratingBar = (RatingBar) getActivity().findViewById(R.id.rating);
-        ratingBar.setRating(product.getRating());
-
-        ImageView imageView = (ImageView) getActivity().findViewById(R.id.image);
-        InputStream is = null;
-        try {
-            is = getActivity().getAssets().open(product.getImage());
-            Drawable drawable = Drawable.createFromStream(is, null);
-            imageView.setImageDrawable(drawable);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
 
     @Override
     public void onItemSelected(AdapterView<?> parent, View view, int pos, long id) {
@@ -180,21 +162,75 @@ public class DetailFragment extends Fragment implements AdapterView.OnItemSelect
         super.onCreateOptionsMenu(menu, inflater);
     }
 
+    public void updateProduct(Product product) {
+        this.product = product;
+
+        EditText name = (EditText) getActivity().findViewById(R.id.name);
+        name.setText(product.getmName());
+
+        EditText description = (EditText) getActivity().findViewById(R.id.description);
+        description.setText(product.getDescription());
+
+        RatingBar ratingBar = (RatingBar) getActivity().findViewById(R.id.rating);
+        ratingBar.setRating(product.getRating());
+
+        ImageView imageView = (ImageView) getActivity().findViewById(R.id.image);
+        InputStream is = null;
+        try {
+            is = getActivity().getAssets().open(product.getImage());
+            Drawable drawable = Drawable.createFromStream(is, null);
+            imageView.setImageDrawable(drawable);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void doUpdateElement(){
+        if (product != null){
+            EditText name = (EditText) getActivity().findViewById(R.id.name);
+            product.setmName(name.getText().toString());
+
+            EditText description = (EditText) getActivity().findViewById(R.id.description);
+            product.setDescription(description.getText().toString());
+
+            RatingBar ratingBar = (RatingBar) getActivity().findViewById(R.id.rating);
+            product.setRating(ratingBar.getRating());
+
+            Spinner category = (Spinner) getActivity().findViewById(R.id.category);
+            rs.aleph.android.example25.db.model.Category c = (rs.aleph.android.example25.db.model.Category)category.getSelectedItem();
+            product.setCategory(c);
+
+            try {
+                ((MainActivity) getActivity()).getDatabaseHelper().getProductDao().update(product);
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+            getActivity().onBackPressed();
+        }
+    }
+
+    private void doRemoveElement(){
+        if (product != null) {
+            try {
+                ((MainActivity) getActivity()).getDatabaseHelper().getProductDao().delete(product);
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+            getActivity().onBackPressed();
+        }
+    }
+
     /**
-     * Na fragment dodajemo element za brisanje elementa
+     * Na fragment dodajemo element za brisanje elementa i za izmenu podataka
      * */
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case R.id.remove:
-                try {
-                    if (product != null) {
-                        ((MainActivity) getActivity()).getDatabaseHelper().getProductDao().delete(product);
-                        getActivity().onBackPressed();
-                    }
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
+                doRemoveElement();
+                break;
+            case R.id.update:
+                doUpdateElement();
                 break;
         }
 
