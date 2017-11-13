@@ -202,25 +202,39 @@ public class MainActivity extends AppCompatActivity implements OnProductSelected
         ok.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                String name = productName.getText().toString();
-                String desct = productDescr.getText().toString();
-                float price = Float.parseFloat(productRating.getText().toString());
-                Category categoty = (Category) productsSpinner.getSelectedItem();
-                String image = (String) imagesSpinner.getSelectedItem();
-
-
-                Product product = new Product();
-                product.setmName(name);
-                product.setDescription(desct);
-                product.setRating(price);
-                product.setImage(image);
-                product.setCategory(categoty);
-
                 try {
+
+                    String name = productName.getText().toString();
+                    String desct = productDescr.getText().toString();
+
+
+                    //Voditi racuna kada radimo sa brojevima. Ono sto unesemo mora biti broj
+                    //da bi formater uspeo ispravno da formatira broj. Dakle ono sto unesemo
+                    //bice u teksutalnom obliku, i mora biti moguce pretrovirit u broj.
+                    //Ako nije moguce pretvoriti u broj dobicemo NumberFormatException
+                    //Zato je dobro za input gde ocekujemo da stavimo broj, stavimo u xml-u
+                    //da ce tu biti samo unet broj npr android:inputType="number|numberDecimal"
+                    float price = Float.parseFloat(productRating.getText().toString());
+
+                    Category categoty = (Category) productsSpinner.getSelectedItem();
+                    String image = (String) imagesSpinner.getSelectedItem();
+
+
+                    Product product = new Product();
+                    product.setmName(name);
+                    product.setDescription(desct);
+                    product.setRating(price);
+                    product.setImage(image);
+                    product.setCategory(categoty);
+
                     getDatabaseHelper().getProductDao().create(product);
                     refresh();
                     Toast.makeText(MainActivity.this, "Product inserted", Toast.LENGTH_SHORT).show();
-                } catch (SQLException e) {
+                    dialog.dismiss();
+
+                }catch (NumberFormatException e){
+                    Toast.makeText(MainActivity.this, "Rating mora biti broj", Toast.LENGTH_SHORT).show();
+                }catch (SQLException e) {
                     e.printStackTrace();
                 }
             }

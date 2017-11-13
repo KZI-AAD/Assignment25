@@ -51,6 +51,7 @@
         <EditText
             android:id="@+id/product_rating"
             android:layout_width="match_parent"
+            android:inputType="number|numberDecimal"
             android:layout_height="match_parent" />
 
     </LinearLayout>
